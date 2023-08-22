@@ -1,2 +1,5 @@
-# Ignore
+# Ignore sensitive client key
 client_key.json
+
+#Ignore venv
+venv
