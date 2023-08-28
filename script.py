@@ -11,9 +11,13 @@ file_name = 'client_key.json'
 creds = ServiceAccountCredentials.from_json_keyfile_name(file_name, scope)
 client = gspread.authorize(creds)
 
-# Fetch the sheet
-sheet1 = client.open('July Hours Comparison EOM Test').sheet1
-sheet2 = client.open('July Hours Comparison WAU Test').sheet1
+# Prompt the user to input the names of the two spreadsheets to be compared
+spreadsheet1_name = input("Please enter the exact name of the End of The Month Spreadsheet: ")
+spreadsheet2_name = input("Please enter the exact name of the Combined Weekly Add Up Spreadsheet: ")
+
+# Fetch the sheets
+sheet1 = client.open(spreadsheet1_name).sheet1
+sheet2 = client.open(spreadsheet2_name).sheet1
 total_eom_sheet = sheet1.get_all_records()
 total_wau_sheet = sheet2.get_all_records()
 
@@ -78,3 +82,5 @@ if total_eom_sheet and "id" in total_eom_sheet[0] and total_wau_sheet and "id" i
         print("NONE")
 
 print("\n--------------------------------------------------------------------------------------------\n")
+
+print("Number of differences is ", len(differences))
