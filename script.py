@@ -2,6 +2,14 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pprint
 
+def fetch_sheet(name):
+    """Fetch a sheet given its name."""
+    try:
+        return client.open(name).sheet1
+    except gspread.exceptions.SpreadsheetNotFound:
+        print(f"Error: Spreadsheet '{name}' not found. Please check you have entered the exact name located in the top left of the Google Sheet and try again.")
+        exit()
+
 # Authorizes the API
 scope = [
     'https://www.googleapis.com/auth/drive',
@@ -12,21 +20,12 @@ creds = ServiceAccountCredentials.from_json_keyfile_name(file_name, scope)
 client = gspread.authorize(creds)
 
 # Prompt the user to input the names of the two spreadsheets to be compared
-spreadsheet1_name = input("Please enter the exact name of the End of The Month Spreadsheet: ")
-spreadsheet2_name = input("Please enter the exact name of the Combined Weekly Add Up Spreadsheet: ")
+spreadsheet1_name = input("Please enter the name of the End of The Month Spreadsheet: ")
+spreadsheet2_name = input("Please enter the name of the Combined Weekly Add Up Spreadsheet: ")
 
 # Fetch the sheets
-try:
-    sheet1 = client.open(spreadsheet1_name).sheet1
-except gspread.exceptions.SpreadsheetNotFound:
-    print(f"Error: Spreadsheet '{spreadsheet1_name}' not found. Please check the name and try again.")
-    exit()
-
-try:
-    sheet2 = client.open(spreadsheet2_name).sheet1
-except gspread.exceptions.SpreadsheetNotFound:
-    print(f"Error: Spreadsheet '{spreadsheet2_name}' not found. Please check the name and try again.")
-    exit()
+sheet1 = fetch_sheet(spreadsheet1_name)
+sheet2 = fetch_sheet(spreadsheet2_name)
 
 total_eom_sheet = sheet1.get_all_records()
 total_wau_sheet = sheet2.get_all_records()
@@ -35,8 +34,10 @@ differences = []
 added_to_eom_not_in_wau = []
 added_to_wau_not_in_eom = []
 
+has_id = total_eom_sheet and "id" in total_eom_sheet[0] and total_wau_sheet and "id" in total_wau_sheet[0]
+
 # Check if "id" column is present
-if total_eom_sheet and "id" in total_eom_sheet[0] and total_wau_sheet and "id" in total_wau_sheet[0]:
+if has_id:
     total_eom_dict = {row['id']: row for row in total_eom_sheet}
     total_wau_dict = {row['id']: row for row in total_wau_sheet}
 
@@ -59,41 +60,32 @@ else:
     total_eom_set = {frozenset(row.items()) for row in total_eom_sheet}
     total_wau_set = {frozenset(row.items()) for row in total_wau_sheet}
 
-    for row1 in total_eom_sheet:
-        if frozenset(row1.items()) not in total_wau_set:
-            differences.append({'Row in Total EOM': row1})
+    # START NUMBER NEEDS TO BE CHANGED IF DATA DOES NOT START ON ROW 2
+for i, row1 in enumerate(total_eom_sheet, start=2):
+    if frozenset(row1.items()) not in total_wau_set:
+        differences.append({'Row in Total EOM': row1, 'Row Number in Total EOM': i})
 
-    for row2 in total_wau_sheet:
-        if frozenset(row2.items()) not in total_eom_set:
-            differences.append({'Row in Total WAU': row2})
+for i, row2 in enumerate(total_wau_sheet, start=2):
+    if frozenset(row2.items()) not in total_eom_set:
+        differences.append({'Row in Total WAU': row2, 'Row Number in Total WAU': i})
 
 # Output
+pp = pprint.PrettyPrinter()
 print("\n--------------------------------------------------------------------------------------------\n")
 print("Differences:")
 if differences:
-    pp_diff = pprint.PrettyPrinter()
-    pp_diff.pprint(differences)
+    pp.pprint(differences)
 else:
     print("The sheets are identical")
 
-if total_eom_sheet and "id" in total_eom_sheet[0] and total_wau_sheet and "id" in total_wau_sheet[0]:
+if has_id:
     print("\n--------------------------------------------------------------------------------------------\n")
     print("Added Rows in Total EOM not in Total WAU:")
-    if added_to_eom_not_in_wau:
-        pp_added_eom = pprint.PrettyPrinter()
-        pp_added_eom.pprint(added_to_eom_not_in_wau)
-    else:
-        print("NONE")
+    pp.pprint(added_to_eom_not_in_wau) if added_to_eom_not_in_wau else print("NONE")
 
     print("\n--------------------------------------------------------------------------------------------\n")
-
     print("Added Rows in Total WAU not in Total EOM:")
-    if added_to_wau_not_in_eom:
-        pp_added_wau = pprint.PrettyPrinter()
-        pp_added_wau.pprint(added_to_wau_not_in_eom)
-    else:
-        print("NONE")
+    pp.pprint(added_to_wau_not_in_eom) if added_to_wau_not_in_eom else print("NONE")
 
 print("\n--------------------------------------------------------------------------------------------\n")
-
 print("Number of differences is ", len(differences))
