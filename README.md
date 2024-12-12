@@ -10,4 +10,3 @@ This script is provided as-is and will require adjustments to fit your specific 
 
 Feel free to contribute to this repository by submitting pull requests or suggesting improvements. If you encounter any issues, please open an issue on GitHub.
 
-For further information, you can contact [bradygin3@gmail.com](mailto:bradygin3@gmail.com).
